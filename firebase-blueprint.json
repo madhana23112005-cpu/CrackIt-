@@ -1,0 +1,111 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User account profiling information describing roles (student/tpo), name, scores, and performance stats.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Unique user credentials identifier from Firebase Authentication."
+        },
+        "email": {
+          "type": "string",
+          "description": "Registered email address."
+        },
+        "role": {
+          "type": "string",
+          "enum": ["student", "tpo", "superadmin"],
+          "description": "Assigned platform access role (student, tpo, or superadmin)."
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name of the student or officer."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating registration date."
+        },
+        "college": {
+          "type": "string",
+          "description": "Appearing affiliate institution name (Required if role is TPO)."
+        },
+        "department": {
+          "type": "string",
+          "description": "Academic branch (CS, IT, ECE, EEE, etc.)."
+        },
+        "registerNumber": {
+          "type": "string",
+          "description": "University Student Register ID number."
+        },
+        "collegeId": {
+          "type": "string",
+          "description": "College code or code identifier."
+        },
+        "collegeName": {
+          "type": "string",
+          "description": "Alternative key for appearing college name."
+        },
+        "branch": {
+          "type": "string",
+          "description": "Active student academic branch."
+        },
+        "cgpa": {
+          "type": "number",
+          "description": "Current student CGPA."
+        },
+        "aptitudeAccuracy": {
+          "type": "number",
+          "description": "Simulated aptitude accuracy percentage."
+        },
+        "technicalAccuracy": {
+          "type": "number",
+          "description": "Simulated technical accuracy percentage."
+        },
+        "mockTestAverage": {
+          "type": "number",
+          "description": "Mock test average percentage score."
+        },
+        "resumeScore": {
+          "type": "number",
+          "description": "Resume score validation percentage."
+        },
+        "readinessScore": {
+          "type": "number",
+          "description": "Overall placement readiness score index."
+        },
+        "weakTopics": {
+          "type": "array",
+          "description": "List of weak topics needing improvement."
+        },
+        "strongTopics": {
+          "type": "array",
+          "description": "List of strong topics mastered."
+        },
+        "questionsAnsweredToday": {
+          "type": "number",
+          "description": "Number of questions solved today."
+        },
+        "dailyStreak": {
+          "type": "number",
+          "description": "Consequent active days streak count."
+        },
+        "assignedTestsIds": {
+          "type": "array",
+          "description": "List of mock tests assigned to the student."
+        },
+        "attendedQuestionIds": {
+          "type": "array",
+          "description": "List of question IDs answered by the student."
+        }
+      },
+      "required": ["uid", "email", "role", "name", "createdAt"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "User profiles indexed by their Firebase internal authentication uid."
+    }
+  }
+}

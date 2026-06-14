@@ -1,0 +1,6 @@
+{
+  "name": "CrackIt",
+  "description": "A comprehensive placement training web platform for pre-final and final year engineering students of affiliated colleges, offering adaptive daily question challenges, company-specific resume validations with AI feedback, mock tests, and placement readiness tracking.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
