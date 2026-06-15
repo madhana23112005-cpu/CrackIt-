@@ -58,6 +58,7 @@ export interface ResumeValidationResult {
   missingSkills: string[];
   projectFeedback: string;
   actionItems: string[];
+  interviewTips?: string[];
 }
 
 export interface MockTest {

@@ -88,7 +88,14 @@ app.post("/api/resume-validator", async (req, res) => {
       ${resumeText}
       \"\"\"
 
-      Provide rating, CGPA cutoff check, skills analysis, project review, and action items.
+      Calculate a GENUINE, strict ATS audit score (do NOT inflate the score, give realistic low scores like 15-45 if the resume has very few words, lacks clear projects, or lacks core technical skills. Be an authentic reviewer. A high score like 80+ should only be given to exceptional resumes with specific metrics and deep alignment with ${company}):
+      - Scoring Tier Rules:
+        * 15-45: Poor/Inadequate (e.g. placeholder texts, missing sections, missing tech stack, no metrics or realistic projects)
+        * 46-65: Needs work (many alignment factors missing, weak formatting, basic self-made simple projects like basic calculators, lacking key company matching skills)
+        * 66-80: Solid academic resume with decent project contributions but some company gaps.
+        * 81-100: Exceptional alignment, rich impact metrics, core certifications, strong DSA or system skill match.
+
+      Provide rating, CGPA cutoff check, skills analysis, project review, action items, and actionable interview tips specific to clearing ${company}'s standard.
       Format the output structure according to the specified JSON schema.
     `;
 
@@ -140,6 +147,11 @@ app.post("/api/resume-validator", async (req, res) => {
               items: { type: Type.STRING },
               description: "Pragmatic, concrete steps the candidate must take to boost their score",
             },
+            interviewTips: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING },
+              description: "Actionable, company-specific interview tips for clearing recruitment rounds at this target corporate entity"
+            }
           },
           required: [
             "score",
@@ -150,6 +162,7 @@ app.post("/api/resume-validator", async (req, res) => {
             "missingSkills",
             "projectFeedback",
             "actionItems",
+            "interviewTips",
           ],
         },
       },
@@ -656,15 +669,7 @@ function getMockHRFeedback(messages: any[], company: string, branch: string): an
 
 // Helper mock fallback validator
 function getMockValidationResult(text: string, company: string): any {
-  // Simple heuristic checks for mock scoring
-  let score = 55; // base
-  const resumeLower = text.toLowerCase();
-  
-  if (resumeLower.includes("react") || resumeLower.includes("angular") || resumeLower.includes("vue")) score += 8;
-  if (resumeLower.includes("node") || resumeLower.includes("express") || resumeLower.includes("python")) score += 8;
-  if (resumeLower.includes("sql") || resumeLower.includes("database") || resumeLower.includes("mongodb")) score += 6;
-  if (resumeLower.includes("project")) score += 10;
-  if (resumeLower.includes("internship")) score += 10;
+  const resumeLower = (text || "").trim().toLowerCase();
   
   // Cutoffs
   let cgpaLimit = 6.0;
@@ -680,16 +685,73 @@ function getMockValidationResult(text: string, company: string): any {
   if (gpaMatch && gpaMatch[1]) {
     parsedCGPA = parseFloat(gpaMatch[1]);
   }
-
   const passedCgpa = parsedCGPA >= cgpaLimit;
-  if (passedCgpa) {
+
+  // Heuristic Checks - Very short/bad resume gets a very low genuine score
+  if (resumeLower.length < 100) {
+    return {
+      score: 18,
+      company,
+      cgpaValidation: {
+        passed: passedCgpa,
+        cutoff: cgpaLimit,
+        message: `Minimal content parsed. Cutoff requirement is ${cgpaLimit} CGPA.`
+      },
+      keyFeedback: [
+        "Extremely short or minimal resume text detected. Professional resumes require at least 300 words.",
+        "Missing essential building blocks: full key skills, detailed project sections, degree specification."
+      ],
+      matchingSkills: [],
+      missingSkills: ["Core Technical Stack", "Logical Coding", "System Design"],
+      projectFeedback: "No projects were detected. You must describe at least 2 real-world system applications or mini-projects to pass the initial screening.",
+      actionItems: [
+        "Please paste your complete professional resume text containing academic coursework and project names.",
+        "Include relevant system tools, methodologies, and specific tools used.",
+        "Adopt the industry-standard STAR format (Situation, Task, Action, Result) to explain project outcomes."
+      ],
+      interviewTips: [
+        "Do not leave the resume draft empty before sitting for interviews; recruiters will reject it within 5 seconds.",
+        "Prepare clean spoken explanations for at least two main college laboratory mini-projects."
+      ],
+      isLiveAI: false
+    };
+  }
+
+  // Base score depends on text length
+  let score = 35;
+  if (resumeLower.length > 1500) {
+    score = 55; // Detailed resume
+  } else if (resumeLower.length > 700) {
+    score = 45; // Moderate resume
+  }
+
+  // Tech stack matching
+  if (resumeLower.includes("react") || resumeLower.includes("angular") || resumeLower.includes("vue") || resumeLower.includes("next.js")) score += 6;
+  if (resumeLower.includes("node") || resumeLower.includes("express") || resumeLower.includes("python") || resumeLower.includes("django")) score += 6;
+  if (resumeLower.includes("sql") || resumeLower.includes("postgres") || resumeLower.includes("database") || resumeLower.includes("mongodb")) score += 5;
+  if (resumeLower.includes("java") || resumeLower.includes("c++") || resumeLower.includes("cpp") || resumeLower.includes("clang") || resumeLower.includes("javascript")) score += 5;
+  if (resumeLower.includes("project") || resumeLower.includes("projects")) score += 7;
+  if (resumeLower.includes("internship") || resumeLower.includes("experience") || resumeLower.includes("worked")) score += 8;
+  if (resumeLower.includes("git") || resumeLower.includes("github") || resumeLower.includes("deployed")) score += 4;
+  
+  // Real impact metric check (presence of % or numbers like "improved 15%", etc.)
+  if (resumeLower.includes("%") || resumeLower.includes("percent") || resumeLower.includes("reduced") || resumeLower.includes("optimized") || resumeLower.includes("increased")) {
     score += 8;
+  } else {
+    // subtract or withhold score if no impact metrics present
+    score -= 5;
+  }
+
+  // Apply CGPA weight or deduction
+  if (passedCgpa) {
+    score += 4;
   } else {
     score -= 15;
   }
 
-  if (score > 100) score = 97;
-  if (score < 10) score = 15;
+  // Bracket bounds
+  if (score > 98) score = 96;
+  if (score < 15) score = 15;
 
   const requirementsMap: { [key: string]: string[] } = {
     TCS: ["Java/C++ programming", "Basic SQL queries", "Data structures", "Aptitude agility", "Good communication"],
@@ -702,6 +764,41 @@ function getMockValidationResult(text: string, company: string): any {
   const req = requirementsMap[company] || ["Aptitude", "Project work", "Coding"];
   const matchingSkills = req.filter(sk => resumeLower.includes(sk.split(" ")[0].toLowerCase()));
   const missingSkills = req.filter(sk => !resumeLower.includes(sk.split(" ")[0].toLowerCase()));
+
+  // Company Specific Interview Tips Builder
+  const interviewTipsMap: { [key: string]: string[] } = {
+    Zoho: [
+      "🔥 Zoho Core rounds rely heavily on offline C/C++/Java flow control, output prediction parsing, and strong pointer logs.",
+      "💻 Prepare for the Zoho Advanced Programming round: write high-quality OOP code from scratch to build fully-working modular terminal applications (like a Train Ticket Reservation system or Bus Booking simulator) within 3 hours.",
+      "🎓 Academic credentials are secondary to self-made coding expertise; speak directly and show working demos if asked."
+    ],
+    TCS: [
+      "🔥 TCS NQT is speed-driven: practice rapid verbal reasoning, quant sections, and standard algorithmic patterns (Strings, Arrays).",
+      "📊 For TCS Prime/Digital: master database indexing, ACID properties, subqueries, and standard web hosting deployment architectures.",
+      "💬 Be highly polished: corporate communication and team flexibility are evaluated heavily during the interview."
+    ],
+    Infosys: [
+      "🔥 Infosys interviewers prioritize SDLC basics, clean software coding patterns, and analytical logical puzzle solutions.",
+      "🌐 Expect questions on Cloud computing basics (AWS/Azure concepts) and Web development architectures (REST APIs, MVC).",
+      "🎯 Show readiness for training: emphasis is placed on adaptability and standard software engineering practices."
+    ],
+    Wipro: [
+      "🔥 Wipro Elite assessment evaluates core procedural programming with standard syntax; fail-safe custom test cases thoroughly.",
+      "🛠️ Understand common data structure concepts like Stack, Queue, HashMaps, and their performance complexities (Big-O scaling).",
+      "🗣️ Explain your projects using the STAR formula (Situation, Task, Action, Result) to clearly demonstrate engineering metrics."
+    ],
+    "L&T": [
+      "🔥 L&T focuses heavily on core engineering fundamentals: prepare basic electronics, circuits, CAD/MATLAB logic, or power dynamics.",
+      "📝 Highlight any physical layout planning, schematic designs, or laboratory implementations with complete flowcharts.",
+      "💼 Be ready for spatial analytical questions and showcase absolute ready work ethic with geographical flexibility."
+    ]
+  };
+
+  const defaultTips = [
+    "Prepare a formal 1-minute self-introduction touching upon your technical strengths, core projects, and immediate career goals.",
+    "Be ready to white-board basic programming algorithms like bubble sort, character counting, or Fibonacci sequences.",
+    "Refine your project presentation: clarify your specific individual role and key tools deployed."
+  ];
 
   return {
     score,
@@ -726,6 +823,7 @@ function getMockValidationResult(text: string, company: string): any {
       `Incorporate a clear "Achievements / Academic Honors" category highlighting Anna University scores if available.`,
       `Refine sentences using the STAR format (Situation, Task, Action, Result) to maximize impact.`
     ],
+    interviewTips: interviewTipsMap[company] || defaultTips,
     isLiveAI: false
   };
 }

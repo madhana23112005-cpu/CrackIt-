@@ -2584,6 +2584,26 @@ export default function App() {
                             </div>
                           </div>
 
+                          {/* Dynamic Company Specific Interview Tips */}
+                          {validationResult.interviewTips && validationResult.interviewTips.length > 0 && (
+                            <div className="p-4 bg-amber-50/40 rounded-xl border border-amber-150 space-y-2">
+                              <div className="flex items-center gap-1.5">
+                                <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                                <span className="text-[10px] uppercase font-bold tracking-widest text-amber-800 block">
+                                  {t('COMPANY TARGET INTERVIEW TIPS', 'நிறுவன நேர்காணல் குறிப்புகள்')}
+                                </span>
+                              </div>
+                              <div className="space-y-2">
+                                {validationResult.interviewTips.map((tip, idx) => (
+                                  <div key={idx} className="flex gap-2 text-xs text-slate-700 font-semibold leading-relaxed">
+                                    <span className="text-amber-500 font-bold">✦</span>
+                                    <span>{tip}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
                           {/* Method footer */}
                           <div className="border-t border-slate-100 pt-4.5 flex justify-between items-center text-[10px] tracking-wide text-slate-400 uppercase font-bold">
                             <span>{t('Evaluation Engine', 'மதிப்பீட்டு முறை')}</span>
